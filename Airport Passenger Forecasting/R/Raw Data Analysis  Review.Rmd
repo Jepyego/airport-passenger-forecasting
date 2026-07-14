@@ -1,0 +1,169 @@
+---
+title: "Raw Data Analysis Review"
+author: "Abigael Jepyego"
+date: "2026-07-10"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(dplyr)
+library(tseries)
+library(forecast)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+getwd()
+```
+
+```{r}
+list.files()
+```
+
+```{r}
+airport <- read_excel("C:/Users/Lenovo/Downloads/RAW DATA BY AIRPORT.xlsx")
+```
+
+#View data
+
+```{r}
+head(airport)
+
+str(airport)
+
+summary(airport)
+```
+
+#Check for missings values
+
+```{r}
+colSums(is.na(airport))
+```
+
+#Create a proper column data
+
+```{r}
+airport$Date <- as.Date(
+  paste(
+    airport$Year,
+    airport$Month,
+    "1"
+  ),
+  format="%Y %B %d"
+)
+```
+
+#Sort the data
+
+```{r}
+library(dplyr)
+airport <- airport %>%
+  arrange(Date)
+```
+ 
+```{r}
+names(airport)
+```
+ 
+```{r}
+colnames(airport)
+```
+```{r}
+head(airport)
+```
+#Check for missing years
+```{r}
+sum(is.na(airport$Year))
+```
+#Remove rows with missing values
+```{r}
+airport <- airport[!is.na(airport$Year), ]
+airport <- airport[!is.na(airport$`TOTAL PAX`), ]
+```
+
+```{r}
+sum(is.na(airport$Year))
+sum(is.na(airport$`TOTAL PAX`))
+```
+#Create a time series
+```{r}
+passengers <- airport$`TOTAL PAX`
+
+ts_passengers <- ts(
+  passengers,
+  start = c(min(airport$Year), 1),
+  frequency = 12
+)
+```
+
+#PLot a time series
+```{r}
+plot(
+  ts_passengers,
+  main = "Monthly Passenger Traffic",
+  xlab = "Year",
+  ylab = "Total Passengers",
+  col = "blue",
+  lwd = 2
+)
+```
+
+```{r}
+adf.test(ts_passengers)
+```
+#Plot the ACF and PACF
+```{r}
+par(mfrow = c(1, 2))
+
+acf(ts_passengers,
+    main = "Autocorrelation Function (ACF)")
+
+pacf(ts_passengers,
+     main = "Partial Autocorrelation Function (PACF)")
+
+par(mfrow = c(1, 1))
+```
+#Fitting the Arima Model
+```{r}
+library(forecast)
+
+model <- auto.arima(ts_passengers)
+
+summary(model)
+```
+#Forecast for the next 12 months
+```{r}
+forecast_12 <- forecast(model, h = 12)
+
+forecast_12
+```
+
+#Plot the forecast
+```{r}
+plot(
+  forecast_12,
+  main = "12-Month Passenger Forecast",
+  xlab = "Year",
+  ylab = "Total Passengers"
+)
+```
+
+#Evaluate the model
+```{r}
+checkresiduals(model)
+```
+
+```{r}
+summary(model)
+```
+
+#Model Summary
+
+The best model selected by `auto.arima()` was:
+
+ARIMA(5,1,5)(0,0,2)[12]**
